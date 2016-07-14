@@ -10,7 +10,7 @@ using Moq;
 namespace Microsoft.VisualStudio.ProjectSystem.VS
 {
     [ProjectSystemTrait]
-    public class RenamerTests
+    public class SimpleRenamerTests
     {
         [Theory]
         [InlineData("class Foo{}", "Foo.cs", "Bar.cs")]
