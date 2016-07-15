@@ -79,7 +79,11 @@ namespace Microsoft.VisualStudio.ProjectSystem.VS
 
         private IRenameStrategy GetStrategy()
         {
-            return new SimpleRenameStrategy(_threadingService, _userNotificationServices, _optionsSettings, _roslynServices);
+            IRenameStrategy[] strategies = new IRenameStrategy[] {
+                new NestedClassRenameStrategy(),
+                new SimpleRenameStrategy(_threadingService, _userNotificationServices, _optionsSettings, _roslynServices)
+            };
+            return strategies.FirstOrDefault(s => s.CanHandleRename(_oldFilePath, _newFilePath));
         }
     }
 }

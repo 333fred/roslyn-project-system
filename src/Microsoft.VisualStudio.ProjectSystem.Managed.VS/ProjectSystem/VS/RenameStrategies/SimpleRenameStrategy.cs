@@ -2,30 +2,25 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Editing;
 using System.Globalization;
 using System.IO;
 
 namespace Microsoft.VisualStudio.ProjectSystem.VS.RenameStrategies
 {
-    internal sealed class SimpleRenameStrategy : IRenameStrategy
+    internal sealed class SimpleRenameStrategy : AbstractRenameStrategy
     {
-        private readonly IProjectThreadingService _threadingService;
-        private readonly IUserNotificationServices _userNotificationServices;
-        private readonly IOptionsSettings _optionsSettings;
         private readonly IRoslynServices _roslynServices;
-        private bool _userPromptedOnce = false;
-        private bool _userConfirmedRename = true;
 
         public SimpleRenameStrategy(IProjectThreadingService threadingService, IUserNotificationServices userNotificationService, IOptionsSettings optionsSettings, IRoslynServices roslynServices)
+            : base(threadingService, userNotificationService, optionsSettings)
         {
-            _threadingService = threadingService;
-            _userNotificationServices = userNotificationService;
-            _optionsSettings = optionsSettings;
             _roslynServices = roslynServices;
         }
 
-        public async Task RenameAsync(Project myNewProject, string oldFileName, string newFileName)
+        // For the SimpleRename, it can attempt to handle any situtation
+        public override bool CanHandleRename(string oldFileName, string newFileName) => true;
+
+        public override async Task RenameAsync(Project myNewProject, string oldFileName, string newFileName)
         {
             Solution renamedSolution = await GetRenamedSolutionAsync(myNewProject, oldFileName, newFileName).ConfigureAwait(false);
             if (renamedSolution == null)
@@ -84,47 +79,5 @@ namespace Microsoft.VisualStudio.ProjectSystem.VS.RenameStrategies
             return null;
         }
 
-        private Document GetDocument(Project project, string filePath) =>
-            (from d in project.Documents where StringComparers.Paths.Equals(d.FilePath, filePath) select d).FirstOrDefault();
-
-        private async Task<SyntaxNode> GetRootNode(Document newDocument) =>
-            await newDocument.GetSyntaxRootAsync().ConfigureAwait(false);
-
-        private async Task<bool> CheckUserConfirmation(string oldFileName)
-        {
-            if (_userPromptedOnce)
-            {
-                return _userConfirmedRename;
-            }
-
-            await _threadingService.SwitchToUIThread();
-            var userNeedPrompt = _optionsSettings.GetPropertiesValue("Environment", "ProjectsAndSolution", "PromptForRenameSymbol", false);
-            if (userNeedPrompt)
-            {
-                string renamePromptMessage = string.Format(CultureInfo.CurrentCulture, Resources.RenameSymbolPrompt, oldFileName);
-
-                await _threadingService.SwitchToUIThread();
-                _userConfirmedRename = _userNotificationServices.Confirm(renamePromptMessage);
-            }
-
-            _userPromptedOnce = true;
-            return _userConfirmedRename;
-        }
-
-        private bool HasMatchingSyntaxNode(Document document, SyntaxNode syntaxNode, string name)
-        {
-            var generator = SyntaxGenerator.GetGenerator(document);
-            var kind = generator.GetDeclarationKind(syntaxNode);
-
-            if (kind == DeclarationKind.Class ||
-                kind == DeclarationKind.Interface ||
-                kind == DeclarationKind.Delegate ||
-                kind == DeclarationKind.Enum ||
-                kind == DeclarationKind.Struct)
-            {
-                return generator.GetName(syntaxNode) == name;
-            }
-            return false;
-        }
     }
 }

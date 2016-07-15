@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Text;
 using Xunit;
 using Moq;
 
-namespace Microsoft.VisualStudio.ProjectSystem.VS
+namespace Microsoft.VisualStudio.ProjectSystem.VS.Rename
 {
     [ProjectSystemTrait]
     public class SimpleRenamerTests
